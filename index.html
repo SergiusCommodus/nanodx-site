@@ -1,0 +1,626 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#020E16">
+<meta name="description" content="NanoDx delivers real time point of care diagnostics. The NanoDx Tbit test measures three brain injury biomarkers from a fingerstick of blood in minutes.">
+<meta property="og:title" content="NanoDx | Real Time Point of Care Diagnostics">
+<meta property="og:description" content="Objective brain injury answers in minutes, from a fingerstick.">
+<meta property="og:type" content="website">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%23020E16'/%3E%3Cpath d='M7 11h18M7 16h18M7 21h18' stroke='%234DB8F0' stroke-width='2'/%3E%3C/svg%3E">
+<title>NanoDx | Real Time Point of Care Diagnostics</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;800&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: six full screen "pages" switched like an instrument UI. Mobile gets a bottom tab bar and swipe, desktop a top nav. Single dark HUD look in NanoDx brand blues, chosen on purpose. */
+:root{
+  --bg:#020E16; --bg2:#051B2A; --panel:rgba(54,157,214,.045); --line:rgba(120,190,235,.16); --line2:rgba(120,190,235,.32);
+  --fg:#E8F3FA; --mute:#8AA6B8; --dim:#5E7A8C;
+  --blue:#369DD6; --blue2:#0090DD; --cyan:#4DB8F0; --teal:#005D7D; --aqua:#4FD1C5; --ice:#A9DDF5;
+  --font:"Montserrat",system-ui,-apple-system,"Segoe UI",Arial,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+  --gut:clamp(16px,5vw,48px); --max:1120px; --hdr:60px; --tab:62px;
+  --cut:polygon(0 0,calc(100% - 10px) 0,100% 10px,100% 100%,10px 100%,0 calc(100% - 10px));
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font:400 16px/1.6 var(--font);-webkit-font-smoothing:antialiased;overflow-x:hidden;padding-bottom:calc(var(--tab) + env(safe-area-inset-bottom,0px))}
+a{color:inherit}
+h1,h2,h3{margin:0;line-height:1.1;letter-spacing:-.015em;text-wrap:balance}
+p{margin:0}
+.tm{font-size:.55em;vertical-align:super}
+:focus-visible{outline:1px solid var(--cyan);outline-offset:3px}
+.wrap{max-width:var(--max);margin:0 auto;padding-inline:var(--gut)}
+.mono{font-family:var(--mono)}
+.label{font:500 11px/1.2 var(--mono);letter-spacing:.16em;text-transform:uppercase;color:var(--cyan)}
+.lead{color:var(--mute);font-size:1.04rem;max-width:58ch}
+#grid{position:fixed;inset:0;z-index:0;pointer-events:none;
+  background:linear-gradient(var(--line) 1px,transparent 1px) 0 0/56px 56px,linear-gradient(90deg,var(--line) 1px,transparent 1px) 0 0/56px 56px;
+  opacity:.28;-webkit-mask-image:radial-gradient(80% 60% at 50% 20%,#000,transparent 75%);mask-image:radial-gradient(80% 60% at 50% 20%,#000,transparent 75%)}
+
+/* HUD panel with corner ticks */
+.hud{position:relative;border:1px solid var(--line);background:var(--panel)}
+.hud::before{content:"";position:absolute;inset:-1px;pointer-events:none;background-repeat:no-repeat;
+  background-image:linear-gradient(var(--cyan),var(--cyan)),linear-gradient(var(--cyan),var(--cyan)),linear-gradient(var(--cyan),var(--cyan)),linear-gradient(var(--cyan),var(--cyan)),linear-gradient(var(--cyan),var(--cyan)),linear-gradient(var(--cyan),var(--cyan)),linear-gradient(var(--cyan),var(--cyan)),linear-gradient(var(--cyan),var(--cyan));
+  background-size:10px 1px,1px 10px,10px 1px,1px 10px,10px 1px,1px 10px,10px 1px,1px 10px;
+  background-position:0 0,0 0,100% 0,100% 0,0 100%,0 100%,100% 100%,100% 100%}
+
+/* Buttons */
+.btn{display:inline-flex;align-items:center;gap:10px;font:600 14px/1 var(--font);padding:14px 20px;text-decoration:none;color:var(--fg);background:rgba(120,190,235,.08);clip-path:var(--cut);transition:background .2s,color .2s;cursor:pointer;border:0}
+.btn:hover{background:rgba(120,190,235,.16)}
+.btn.pri{background:var(--blue);color:#fff}
+.btn.pri:hover{background:var(--blue2)}
+.btn.sm{padding:10px 14px;font-size:13px}
+.btn .arr{transition:transform .2s}
+.btn:hover .arr{transform:translateX(3px)}
+
+/* Loader */
+#loader{position:fixed;inset:0;z-index:100;background:var(--bg);display:grid;place-items:center;padding:24px;transition:opacity .5s,visibility .5s}
+#loader.done{opacity:0;visibility:hidden}
+.ld{width:min(300px,80vw);display:grid;gap:22px}
+.ldlogo{width:180px;height:auto;color:var(--fg);clip-path:inset(0 100% 0 0);animation:wipe .9s .1s cubic-bezier(.7,0,.3,1) forwards}
+@keyframes wipe{to{clip-path:inset(0 0 0 0)}}
+.ldtrack{position:relative;height:1px;background:var(--line)}
+.ldtrack i{position:absolute;left:0;top:0;height:1px;width:0;background:var(--cyan);box-shadow:0 0 10px var(--cyan),0 0 2px #fff}
+.ldrow{display:flex;justify-content:space-between;font:400 11px var(--mono);letter-spacing:.14em;color:var(--mute);text-transform:uppercase}
+.ldrow b{color:var(--fg);font-weight:500;font-variant-numeric:tabular-nums}
+
+/* Header */
+header{position:sticky;top:env(safe-area-inset-top,0px);z-index:60;height:var(--hdr);background:rgba(2,14,22,.78);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-bottom:1px solid var(--line)}
+.hbar{height:100%;display:flex;align-items:center;justify-content:space-between;gap:16px}
+.logo{display:flex;color:var(--fg);text-decoration:none}
+.logo svg{width:118px;height:auto}
+.nav{display:none;gap:4px}
+.nav a{position:relative;font:500 12px var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--mute);text-decoration:none;padding:8px 12px}
+.nav a:hover{color:var(--fg)}
+.nav a[aria-current="page"]{color:var(--fg)}
+.nav a[aria-current="page"]::after{content:"";position:absolute;left:12px;right:12px;bottom:-11px;height:1px;background:var(--cyan);box-shadow:0 0 10px var(--cyan)}
+.hr{display:flex;align-items:center;gap:14px}
+.pc{font:500 11px var(--mono);letter-spacing:.14em;color:var(--dim);font-variant-numeric:tabular-nums;display:none}
+.pc b{color:var(--fg);font-weight:500}
+
+/* Tab bar (mobile) */
+.tabs{position:fixed;left:0;right:0;bottom:0;z-index:70;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));background:rgba(2,14,22,.9);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom,0px)}
+.tabs a{position:relative;display:grid;justify-items:center;align-content:center;gap:5px;height:var(--tab);font:500 9.5px var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--dim);text-decoration:none}
+.tabs svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
+.tabs a[aria-current="page"]{color:var(--fg)}
+.tabs a[aria-current="page"] svg{color:var(--cyan);filter:drop-shadow(0 0 6px var(--cyan))}
+.tabs a[aria-current="page"]::before{content:"";position:absolute;top:-1px;left:32%;right:32%;height:1px;background:var(--cyan);box-shadow:0 0 10px var(--cyan)}
+@media(min-width:920px){body{padding-bottom:0}.tabs{display:none}.nav{display:flex}.pc{display:block}}
+
+/* Pages */
+main{position:relative;z-index:1}
+.page{min-height:calc(100svh - var(--hdr) - var(--tab));padding-block:44px 56px;display:flex;flex-direction:column}
+.page>.wrap{width:100%;display:grid;gap:30px;align-content:start;flex:1}
+@media(min-width:920px){.page{min-height:calc(100svh - var(--hdr));padding-block:72px 72px}}
+.ph{display:grid;gap:14px}
+.ph h2{font-size:clamp(1.75rem,6.4vw,2.9rem);font-weight:800;max-width:19ch}
+.next{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:auto;padding-top:18px;border-top:1px solid var(--line);text-decoration:none;font-weight:600}
+.next span{font:500 11px var(--mono);letter-spacing:.16em;text-transform:uppercase;color:var(--dim)}
+.next i{font-style:normal;color:var(--cyan);transition:transform .2s}
+.next:hover i{transform:translateX(4px)}
+.page.enter .rv{animation:rise .7s cubic-bezier(.2,.8,.2,1) both;animation-delay:calc(var(--i,0) * 70ms)}
+@keyframes rise{from{opacity:0;transform:translateY(14px);filter:blur(4px)}to{opacity:1;transform:none;filter:none}}
+
+/* Home */
+#home{position:relative;overflow:hidden}
+#field{position:absolute;inset:0;width:100%;height:100%;z-index:0}
+#home .wrap{position:relative;z-index:1;align-content:center}
+#home h1{font-size:clamp(2.3rem,9.4vw,4.6rem);font-weight:800;max-width:13ch}
+.hl{background:linear-gradient(90deg,var(--cyan),var(--aqua));-webkit-background-clip:text;background-clip:text;color:transparent}
+.ctas{display:flex;flex-wrap:wrap;gap:10px}
+.stats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1px;background:var(--line);border:1px solid var(--line);max-width:680px}
+.stats div{background:rgba(2,14,22,.82);padding:16px;display:grid;gap:6px}
+.stats b{font:800 1.5rem/1 var(--font);font-variant-numeric:tabular-nums}
+.stats span{font:400 10.5px/1.35 var(--mono);color:var(--mute);letter-spacing:.08em;text-transform:uppercase}
+@media(min-width:720px){.stats{grid-template-columns:repeat(4,minmax(0,1fr))}}
+
+/* Test */
+.strip{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1px;background:var(--line);border:1px solid var(--line)}
+.strip div{background:var(--bg);padding:16px;display:grid;gap:6px;align-content:start}
+.strip b{font:800 clamp(1.5rem,6vw,2rem)/1 var(--font);color:var(--cyan);font-variant-numeric:tabular-nums}
+.strip p{font-size:.86rem;color:var(--mute)}
+.strip sup{font:400 9px var(--mono);color:var(--dim)}
+@media(min-width:920px){.strip{grid-template-columns:repeat(4,minmax(0,1fr))}}
+.mks{display:grid;gap:12px}
+.mk{padding:20px;display:grid;gap:10px}
+.mk .top{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
+.mk b{font:800 1.5rem/1 var(--font);color:var(--c)}
+.mk .ch{font:500 10.5px var(--mono);letter-spacing:.14em;color:var(--dim)}
+.mk .full{font-size:.84rem;color:var(--mute);font-weight:600}
+.mk p{font-size:.93rem;color:var(--mute)}
+.mk svg{width:100%;height:44px;display:block}
+.mk path{fill:none;stroke:var(--c);stroke-width:1.6}
+.mk .area{fill:var(--c);opacity:.08;stroke:none}
+@media(min-width:920px){.mks{grid-template-columns:repeat(3,minmax(0,1fr))}}
+.pills{display:flex;flex-wrap:wrap;gap:8px}
+.pill{font:400 12px/1 var(--mono);padding:9px 12px;border:1px solid var(--line);color:var(--fg)}
+.pill i{display:inline-block;width:6px;height:6px;background:var(--aqua);margin-right:8px;vertical-align:middle;box-shadow:0 0 8px var(--aqua)}
+
+/* Platform */
+.plat{display:grid;gap:22px}
+.scope{padding:14px;display:grid;gap:10px}
+.scope .bar{display:flex;justify-content:space-between;font:500 10.5px var(--mono);letter-spacing:.14em;color:var(--dim);text-transform:uppercase}
+.scope .bar b{color:var(--aqua);font-weight:500}
+.scope .bar b::before{content:"";display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--aqua);margin-right:6px;box-shadow:0 0 8px var(--aqua);animation:blink 1.4s infinite}
+@keyframes blink{50%{opacity:.25}}
+#chip{width:100%;height:auto;display:block}
+.steps{list-style:none;margin:0;padding:0;display:grid;counter-reset:s}
+.steps li{counter-increment:s;display:grid;grid-template-columns:40px minmax(0,1fr);gap:12px;padding:16px 0;border-top:1px solid var(--line)}
+.steps li::before{content:counter(s,decimal-leading-zero);font:500 12px var(--mono);color:var(--cyan);padding-top:3px}
+.steps h3{font-size:1rem;font-weight:600;margin-bottom:3px}
+.steps p{font-size:.92rem;color:var(--mute)}
+.lic{padding:20px;display:grid;gap:10px}
+.lic h3{font-size:1.1rem;font-weight:600}
+.lic p{color:var(--mute);font-size:.93rem}
+.tags{display:flex;flex-wrap:wrap;gap:6px 14px;font:500 11px var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--fg)}
+.tags span::before{content:"+ ";color:var(--cyan)}
+@media(min-width:920px){.plat{grid-template-columns:1.1fr .9fr;align-items:start}.plat .side{display:grid;gap:22px}}
+
+/* Investors */
+.inv{display:grid;gap:22px}
+.mkt{padding:22px;display:grid;gap:20px}
+.mkt h3{font:500 11px var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--mute)}
+.br{display:grid;gap:7px}
+.br .t{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+.br .t span{font:500 11px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--mute)}
+.br .t b{font:800 1.4rem var(--font);font-variant-numeric:tabular-nums;white-space:nowrap}
+.trk{height:6px;background:rgba(120,190,235,.08);position:relative}
+.trk i{position:absolute;left:0;top:0;bottom:0;width:var(--w);background:var(--c);box-shadow:0 0 14px var(--c);transform-origin:left}
+.page.enter .trk i{animation:grow 1.3s .25s cubic-bezier(.2,.8,.2,1) both}
+@keyframes grow{from{transform:scaleX(0)}}
+.br p{font-size:.82rem;color:var(--dim)}
+.note{font:400 11px/1.6 var(--mono);color:var(--dim)}
+.thesis{display:grid;gap:0}
+.th{display:grid;grid-template-columns:28px minmax(0,1fr);gap:14px;padding:16px 0;border-top:1px solid var(--line)}
+.th svg{width:22px;height:22px;fill:none;stroke:var(--cyan);stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round;margin-top:2px}
+.th h3{font-size:1rem;font-weight:600;margin-bottom:3px}
+.th p{color:var(--mute);font-size:.92rem}
+.thesis .btn{margin-top:18px;justify-self:start}
+@media(min-width:920px){.inv{grid-template-columns:1fr 1fr;align-items:start}}
+
+/* Roadmap */
+.road{list-style:none;margin:0;padding:0;display:grid}
+.road li{position:relative;padding:0 0 26px 30px;display:grid;gap:3px}
+.road li::before{content:"";position:absolute;left:5px;top:12px;bottom:-4px;width:1px;background:var(--line2)}
+.road li:last-child::before{display:none}
+.road li::after{content:"";position:absolute;left:0;top:4px;width:11px;height:11px;border:1px solid var(--cyan);transform:rotate(45deg);background:var(--bg)}
+.road li.done::after{background:var(--cyan);box-shadow:0 0 10px var(--cyan)}
+.road li.now::after{background:var(--aqua);border-color:var(--aqua);animation:pulse 1.8s infinite}
+@keyframes pulse{50%{box-shadow:0 0 0 6px rgba(79,209,197,.15),0 0 14px var(--aqua)}}
+.road .st{font:500 10.5px var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--cyan)}
+.road li.now .st{color:var(--aqua)}
+.road h3{font-size:1.02rem;font-weight:600}
+.road p{color:var(--mute);font-size:.92rem}
+@media(min-width:920px){
+  .road{grid-template-columns:repeat(5,minmax(0,1fr));gap:18px}
+  .road li{padding:30px 0 0}
+  .road li::before{left:16px;right:-18px;top:5px;bottom:auto;width:auto;height:1px}
+  .road li::after{top:0}
+}
+.where{display:grid;gap:12px}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chips span{font:500 12px var(--mono);letter-spacing:.06em;padding:10px 14px;border:1px solid var(--line);background:var(--panel)}
+
+/* Contact */
+.ct{display:grid;gap:22px}
+.cbox{padding:6px 20px}
+.cr{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:16px 0;border-bottom:1px solid var(--line)}
+.cr:last-child{border-bottom:0}
+.cr div{min-width:0}
+.cr span{display:block;font:500 10.5px var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--dim);margin-bottom:4px}
+.cr b{font-weight:600;word-break:break-word;user-select:all}
+.cr a{color:var(--cyan);text-decoration:none}
+@media(min-width:920px){.ct{grid-template-columns:1fr 1fr;align-items:center}}
+
+footer{position:relative;z-index:1;border-top:1px solid var(--line);padding-block:28px;font-size:12px;color:var(--dim)}
+.fg{display:grid;gap:12px}
+.fg nav{display:flex;flex-wrap:wrap;gap:16px;font:500 11px var(--mono);letter-spacing:.1em;text-transform:uppercase}
+.fg nav a{text-decoration:none}
+.fg nav a:hover{color:var(--fg)}
+.disc{font:400 11px/1.6 var(--mono)}
+
+/* Page transition */
+#xfer{position:fixed;inset:0;z-index:80;pointer-events:none;background:var(--bg2);clip-path:inset(0 0 100% 0)}
+#xfer .g{position:absolute;inset:0;background:linear-gradient(var(--line) 1px,transparent 1px) 0 0/28px 28px,linear-gradient(90deg,var(--line) 1px,transparent 1px) 0 0/28px 28px;opacity:.5}
+#xfer .ln{position:fixed;left:0;right:0;top:0;height:2px;margin-top:-1px;background:var(--cyan);box-shadow:0 0 18px 2px var(--cyan),0 0 2px #fff;z-index:81;pointer-events:none}
+#xfer .lb{position:absolute;inset:0;display:grid;place-content:center;justify-items:center;gap:10px;text-align:center}
+#xfer .lb span{font:500 12px var(--mono);letter-spacing:.3em;color:var(--cyan)}
+#xfer .lb b{font:800 clamp(1.6rem,7vw,3rem)/1 var(--font);letter-spacing:.04em;text-transform:uppercase}
+
+#toast{position:fixed;left:50%;bottom:calc(var(--tab) + 16px + env(safe-area-inset-bottom,0px));transform:translate(-50%,10px);opacity:0;background:var(--fg);color:var(--bg);font:600 13px var(--font);padding:10px 16px;clip-path:var(--cut);transition:.25s;z-index:90;pointer-events:none}
+#toast.show{opacity:1;transform:translate(-50%,0)}
+@media(min-width:920px){#toast{bottom:24px}}
+
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}.ldlogo{clip-path:none}}
+</style>
+<style>html,body{margin:0}:root{padding-top:env(safe-area-inset-top,0px)}img{max-width:100%}[hidden]{display:none!important}</style>
+</head>
+<body>
+
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="wm" viewBox="0 0 200 32.757"><path fill="currentColor" d="M196.806,5.846h.484l.731,1.415.726-1.415h.481v2.2h-.388V6.467l-.687,1.351h-.272l-.689-1.351V8.042h-.386Zm-2.1,0h1.8V6.22h-.689V8.042h-.425V6.22h-.687ZM173.444,16.275l-.006.008,0,0,.006-.008ZM200,32.757h-4.147l-.083-.083L179.645,16.3l1.833-1.868,8.509-8.6h4.142l-10.377,10.51ZM178.69,16.281l-2.119,2.669-2.158-2.669,2.169-2.692ZM176.281,19.8l-1.5,1.619-5.406,5.454h-4.144l9.221-9.291Zm-1.855-4.821-9.049-9.169h4.145l5.255,5.342,1.513,1.583Zm2.439-2.266,1.413-1.5,5.3-5.388h4.144l-9.02,9.125Zm1.743,4.894,15.038,15.148H189.5l-11.08-11.325-1.559-1.615Zm-5.166-1.337L163.115,5.813H158.97L169.3,16.275l-10.429,10.6h4.145l10.42-10.593,0,0ZM86.372,5.815V22.528L72.756,5.817l0,0H66.42V26.857h4.5v-16.7l13.608,16.7,0,0h6.342V5.815ZM48.543,10l-4.512,8.347h8.986ZM51.16,5.819,62.62,26.857h-4.97l0,0-2.364-4.408H41.762L39.4,26.857h-4.97l0-.008L45.888,5.815H51.16Zm79.766,17.068V4.024h12.483a10.068,10.068,0,0,1,7.26,2.646,9.2,9.2,0,0,1,2.766,6.971,9.03,9.03,0,0,1-2.58,6.656,8.914,8.914,0,0,1-6.591,2.59ZM126.468.012V26.9h17.425a14.624,14.624,0,0,0,10.026-3.563,12.229,12.229,0,0,0,4.344-9.580,12.87,12.87,0,0,0-4.1-10.009Q150.057.011,143.038.012ZM30.522,0H26.066V22.059L5.533,0H0V26.884H4.456V4.84L24.979,26.884h5.543Zm83.726,19.521c0-4.086-3.36-6.353-5.413-12.149-.106-.3-.264-.3-.367,0-2.053,5.8-5.413,8.063-5.413,12.149a5.6,5.6,0,1,0,11.192,0m7.976-3.173a10.017,10.017,0,0,1-4.391,8.393,15.162,15.162,0,0,1-9.2,2.723A15.305,15.305,0,0,1,99.4,24.742a9.964,9.964,0,0,1-4.4-8.395,9.887,9.887,0,0,1,4.429-8.335,16.531,16.531,0,0,1,18.363,0,9.942,9.942,0,0,1,4.427,8.333m-12.392,6.973a5.216,5.216,0,0,0,1.092-.116c.43-.1.5.012.12.243a4.6,4.6,0,0,1-6.99-3.927,6.5,6.5,0,0,1,.5-2.468c.164-.409.232-.382.17.054a7.285,7.285,0,0,0-.075,1.042,5.177,5.177,0,0,0,5.18,5.172"/></symbol>
+</svg>
+
+<div id="grid" aria-hidden="true"></div>
+
+<div id="loader" role="status" aria-live="polite">
+  <div class="ld">
+    <svg class="ldlogo" viewBox="0 0 200 32.757" aria-label="NanoDx"><use href="#wm"/></svg>
+    <div class="ldtrack"><i id="ldb"></i></div>
+    <div class="ldrow"><span id="ldm">Calibrating sensor</span><b><span id="ldn">0</span>%</b></div>
+  </div>
+</div>
+
+<header>
+  <div class="wrap hbar">
+    <a class="logo" href="#home" aria-label="NanoDx home"><svg viewBox="0 0 200 32.757" aria-hidden="true"><use href="#wm"/></svg></a>
+    <nav class="nav" aria-label="Primary">
+      <a href="#home">Home</a><a href="#test">Test</a><a href="#platform">Platform</a><a href="#investors">Investors</a><a href="#roadmap">Roadmap</a><a href="#contact">Contact</a>
+    </nav>
+    <div class="hr">
+      <div class="pc" id="pc"><b>01</b> / 06</div>
+      <a class="btn pri sm" href="#contact">Contact</a>
+    </div>
+  </div>
+</header>
+
+<main id="main">
+<!-- 01 HOME -->
+<section class="page" id="home" data-name="Home">
+  <canvas id="field" aria-hidden="true"></canvas>
+  <div class="wrap">
+    <div class="label rv">Real time point of care diagnostics</div>
+    <h1 class="rv">When speed and accuracy matter, answers in <span class="hl">minutes</span>.</h1>
+    <p class="lead rv">The NanoDx<span class="tm">™</span> System reads three brain injury biomarkers from a fingerstick of blood on a silicon nanowire sensor. Objective results at the bedside, on the sideline, or at the point of injury.</p>
+    <div class="ctas rv">
+      <a class="btn pri" href="#investors">Investor overview <span class="arr">→</span></a>
+      <a class="btn" href="#test">The Tbit<span class="tm">™</span> test</a>
+    </div>
+    <div class="stats rv" aria-label="Key figures">
+      <div><b data-count="3">3</b><span>Biomarkers per test</span></div>
+      <div><b>1 drop</b><span>Fingerstick blood</span></div>
+      <div><b data-count="100" data-suffix="%">100%</b><span>Sensitivity, feasibility n=100</span></div>
+      <div><b>6 to 9</b><span>Months per new assay</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- 02 TEST -->
+<section class="page" id="test" data-name="The Test" hidden>
+  <div class="wrap">
+    <div class="ph rv">
+      <div class="label">02 · The NanoDx Tbit™ test</div>
+      <h2 data-decode>Three signals. One objective read.</h2>
+      <p class="lead">Mild TBI is hard to call with a subjective coma score and a CT scan that usually finds nothing. The Tbit test replaces guesswork with a quantitative result.</p>
+    </div>
+    <div class="strip rv">
+      <div><b>69M</b><p>TBIs worldwide each year <sup>[1]</sup></p></div>
+      <div><b>70 to 90%</b><p>are mild, the hardest to assess <sup>[2]</sup></p></div>
+      <div><b>38%</b><p>Glasgow Coma Scale error rate <sup>[3]</sup></p></div>
+      <div><b>90%+</b><p>of head CTs considered unnecessary <sup>[4,5]</sup></p></div>
+    </div>
+    <div class="mks">
+      <article class="mk hud rv" style="--c:var(--cyan)">
+        <div class="top"><b>GFAP</b><span class="ch">CH 01 · ASTROCYTE</span></div>
+        <div class="full">Glial fibrillary acidic protein</div>
+        <svg viewBox="0 0 300 44" preserveAspectRatio="none" aria-hidden="true"><path class="area" d="M0 40 C60 40 80 10 140 7 S240 17 300 20 V44 H0Z"/><path d="M0 40 C60 40 80 10 140 7 S240 17 300 20"/></svg>
+        <p>Leaks into blood when astrocytes are damaged. A clear flag for structural brain injury.</p>
+      </article>
+      <article class="mk hud rv" style="--c:var(--aqua)">
+        <div class="top"><b>S100B</b><span class="ch">CH 02 · CALCIUM BINDING</span></div>
+        <div class="full">S100 calcium binding protein B</div>
+        <svg viewBox="0 0 300 44" preserveAspectRatio="none" aria-hidden="true"><path class="area" d="M0 36 C50 24 90 19 140 24 S230 9 300 6 V44 H0Z"/><path d="M0 36 C50 24 90 19 140 24 S230 9 300 6"/></svg>
+        <p>Rises after concussion. Rising levels can flag secondary injury before it shows on imaging.</p>
+      </article>
+      <article class="mk hud rv" style="--c:var(--ice)">
+        <div class="top"><b>UCHL1</b><span class="ch">CH 03 · NEURONAL</span></div>
+        <div class="full">Ubiquitin carboxy terminal hydrolase L1</div>
+        <svg viewBox="0 0 300 44" preserveAspectRatio="none" aria-hidden="true"><path class="area" d="M0 38 C40 37 60 5 110 6 S200 32 300 35 V44 H0Z"/><path d="M0 38 C40 37 60 5 110 6 S200 32 300 35"/></svg>
+        <p>Concentrated in neurons. Enters the bloodstream as the brain's distress signal.</p>
+      </article>
+    </div>
+    <div class="pills rv">
+      <span class="pill"><i></i>Quantitative result</span>
+      <span class="pill"><i></i>Lab accuracy at point of care</span>
+      <span class="pill"><i></i>No sample prep or reagents</span>
+      <span class="pill"><i></i>0 false negatives, n=100</span>
+    </div>
+    <a class="next" href="#platform"><div><span>Next</span><br>How the sensor works</div><i>→</i></a>
+  </div>
+</section>
+
+<!-- 03 PLATFORM -->
+<section class="page" id="platform" data-name="Platform" hidden>
+  <div class="wrap">
+    <div class="ph rv">
+      <div class="label">03 · Platform</div>
+      <h2 data-decode>Semiconductor precision, built for diagnostics.</h2>
+      <p class="lead">Silicon nanowires coated with biomarker specific antibodies read protein binding as a change in electrical resistance.</p>
+    </div>
+    <div class="plat">
+      <div class="scope hud rv">
+        <div class="bar"><span>Nanowire array · ΔR live</span><b>Reading</b></div>
+        <canvas id="chip" width="640" height="250" aria-label="Live trace of three biomarker channels rising as proteins bind"></canvas>
+      </div>
+      <div class="side">
+        <ol class="steps rv">
+          <li><div><h3>Fingerstick sample</h3><p>A drop of blood on a single use cartridge. No centrifuge, no prep.</p></div></li>
+          <li><div><h3>Targeted binding</h3><p>Antibodies on each nanowire capture GFAP, S100B and UCHL1.</p></div></li>
+          <li><div><h3>Electrical readout</h3><p>Each binding event shifts resistance, measured in real time.</p></div></li>
+          <li><div><h3>Result and sync</h3><p>A quantitative result in minutes, sent to the NanoDx data portal.</p></div></li>
+        </ol>
+        <div class="lic hud rv">
+          <div class="label">IP position</div>
+          <h3>Exclusive global license from IBM Research</h3>
+          <p>Worldwide rights to IBM's CMOS compatible nanosensor technology for in vitro diagnostics, backed by NanoDx patents and trade secrets.</p>
+          <div class="tags"><span>Accurate</span><span>Real time</span><span>Scalable</span><span>Multiplex</span></div>
+        </div>
+      </div>
+    </div>
+    <a class="next" href="#investors"><div><span>Next</span><br>The investment case</div><i>→</i></a>
+  </div>
+</section>
+
+<!-- 04 INVESTORS -->
+<section class="page" id="investors" data-name="Investors" hidden>
+  <div class="wrap">
+    <div class="ph rv">
+      <div class="label">04 · For investors</div>
+      <h2 data-decode>A billion dollar category with no point of care leader.</h2>
+      <p class="lead">Every suspected TBI in a US emergency department is a testing opportunity. NanoDx starts with adult mild TBI and extends one platform across settings and indications.</p>
+    </div>
+    <div class="inv">
+      <div class="mkt hud rv">
+        <h3>US TBI testing market · reimbursed value</h3>
+        <div class="br" style="--c:var(--cyan)"><div class="t"><span>TAM · all ED evaluated TBI</span><b>$1.04B</b></div><div class="trk"><i style="--w:100%"></i></div><p>About 4.8M patients evaluated each year</p></div>
+        <div class="br" style="--c:var(--blue)"><div class="t"><span>SAM · adult mild TBI</span><b>$934M</b></div><div class="trk"><i style="--w:89.8%"></i></div><p>About 3.6M tests per year in the initial indication</p></div>
+        <div class="br" style="--c:var(--aqua)"><div class="t"><span>SOM · year 5 target</span><b>$115M</b></div><div class="trk"><i style="--w:11.1%"></i></div><p>Bottom up from analyzer placements across 550 sites</p></div>
+        <p class="note">Directional estimates on current reimbursement benchmarks. Excludes military, EMS, sports, pediatric and international upside.</p>
+      </div>
+      <div class="thesis rv">
+        <div class="th"><svg viewBox="0 0 22 22"><path d="M3 16l5-6 4 3 7-9"/></svg><div><h3>Recurring revenue</h3><p>Analyzer placements drive repeat cartridge use. Costs fall with chip scale manufacturing.</p></div></div>
+        <div class="th"><svg viewBox="0 0 22 22"><path d="M4 11.5l4.5 4.5L18 6"/></svg><div><h3>Faster regulatory route</h3><p>A 510(k) pathway opens a first mover window against slower De Novo competitors.</p></div></div>
+        <div class="th"><svg viewBox="0 0 22 22"><circle cx="11" cy="11" r="8"/><path d="M11 6v10"/></svg><div><h3>Clear payer value</h3><p>Avoiding one unnecessary head CT saves cost, time and radiation.</p></div></div>
+        <div class="th"><svg viewBox="0 0 22 22"><rect x="4" y="4" width="14" height="14"/><path d="M8 9h6M8 13h6"/></svg><div><h3>One platform, many tests</h3><p>New biomarker panels on the same chip make TBI the first of many products.</p></div></div>
+        <a class="btn pri" href="#contact">Request the investor deck <span class="arr">→</span></a>
+      </div>
+    </div>
+    <a class="next" href="#roadmap"><div><span>Next</span><br>Roadmap</div><i>→</i></a>
+  </div>
+</section>
+
+<!-- 05 ROADMAP -->
+<section class="page" id="roadmap" data-name="Roadmap" hidden>
+  <div class="wrap">
+    <div class="ph rv">
+      <div class="label">05 · Roadmap</div>
+      <h2 data-decode>From feasibility to every front line.</h2>
+    </div>
+    <ol class="road rv">
+      <li class="done"><div class="st">Complete</div><h3>Pre clinical feasibility</h3><p>100% sensitivity, 0 false negatives across 100 samples.</p></li>
+      <li class="now"><div class="st">In progress</div><h3>Clinical validation and 510(k)</h3><p>Pivotal study and FDA submission for adult mild TBI.</p></li>
+      <li><div class="st">Next</div><h3>CLIA waiver</h3><p>Opens urgent care and clinics outside the hospital lab.</p></li>
+      <li><div class="st">Expansion</div><h3>New settings</h3><p>Military, EMS, sports medicine, pediatrics, international.</p></li>
+      <li><div class="st">Directional</div><h3>New indications</h3><p>More biomarker panels on the same chip.</p></li>
+    </ol>
+    <div class="where rv">
+      <div class="label">Built for the point of injury</div>
+      <div class="chips"><span>Emergency department</span><span>Military medicine</span><span>EMS</span><span>Sports medicine</span><span>Underserved care</span></div>
+    </div>
+    <a class="next" href="#contact"><div><span>Next</span><br>Talk to NanoDx</div><i>→</i></a>
+  </div>
+</section>
+
+<!-- 06 CONTACT -->
+<section class="page" id="contact" data-name="Contact" hidden>
+  <div class="wrap ct">
+    <div class="ph rv">
+      <div class="label">06 · Contact</div>
+      <h2 data-decode>Talk to NanoDx.</h2>
+      <p class="lead">Investors, clinical partners and government teams can reach us directly.</p>
+    </div>
+    <div class="cbox hud rv">
+      <div class="cr"><div><span>Email</span><b>info@nanodiagnostics.com</b></div><button class="btn sm" data-copy="info@nanodiagnostics.com">Copy</button></div>
+      <div class="cr"><div><span>Phone</span><b>(508) 599 2400</b></div><button class="btn sm" data-copy="(508) 599 2400">Copy</button></div>
+      <div class="cr"><div><span>Headquarters</span><b>144 Turnpike Road, Suite 110<br>Southborough, MA 01772</b></div></div>
+      <div class="cr"><div><span>LinkedIn</span><b><a href="https://www.linkedin.com/company/nanodxinc/" target="_blank" rel="noopener">linkedin.com/company/nanodxinc</a></b></div></div>
+      <div class="cr"><div><span>Customers</span><b><a href="https://us-portal.nanodiagnostics.com/" target="_blank" rel="noopener">Customer login</a></b></div></div>
+    </div>
+  </div>
+</section>
+</main>
+
+<footer>
+  <div class="wrap fg">
+    <nav aria-label="Footer">
+      <a href="https://nanodiagnostics.com/privacy-policy/" target="_blank" rel="noopener">Privacy</a>
+      <a href="https://nanodiagnostics.com/terms-of-use/" target="_blank" rel="noopener">Terms</a>
+      <a href="https://us-portal.nanodiagnostics.com/" target="_blank" rel="noopener">Customer login</a>
+    </nav>
+    <p class="disc">The NanoDx™ System has not been evaluated by the FDA or other regulatory agencies. Sources: [1] J Neurosurg 2018. [2] CDC 2016/2017. [3] J Neurotrauma 2021. [4] ED evaluation of TBI in the US, 2009 to 2010. [5] US FDA 2017.</p>
+    <p>© 2026 NanoDx™, Inc.</p>
+  </div>
+</footer>
+
+<nav class="tabs" aria-label="Sections">
+  <a href="#home"><svg viewBox="0 0 24 24"><path d="M4 11l8-6 8 6v8H4z"/></svg>Home</a>
+  <a href="#test"><svg viewBox="0 0 24 24"><path d="M12 3c3 4 5.5 7 5.5 10.5a5.5 5.5 0 01-11 0C6.5 10 9 7 12 3z"/></svg>Test</a>
+  <a href="#platform"><svg viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12"/><path d="M9 2v4M15 2v4M9 18v4M15 18v4M2 9h4M2 15h4M18 9h4M18 15h4"/></svg>Tech</a>
+  <a href="#investors"><svg viewBox="0 0 24 24"><path d="M4 19h16M7 15v-3M12 15V8M17 15V5"/></svg>Invest</a>
+  <a href="#roadmap"><svg viewBox="0 0 24 24"><path d="M5 19c4 0 3-7 7-7s3-7 7-7"/><circle cx="5" cy="19" r="1.5"/><circle cx="19" cy="5" r="1.5"/></svg>Roadmap</a>
+</nav>
+
+<div id="xfer" aria-hidden="true" hidden>
+  <div class="g"></div>
+  <div class="lb"><span id="xn">02</span><b id="xt">The Test</b></div>
+  <div class="ln" id="xl"></div>
+</div>
+<div id="toast" role="status" aria-live="polite"></div>
+
+<script>
+(function(){
+  var reduce=window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var $=function(s,r){return(r||document).querySelector(s)}, $$=function(s,r){return[].slice.call((r||document).querySelectorAll(s))};
+  var pages=$$('.page'), ids=pages.map(function(p){return p.id}), byId={};pages.forEach(function(p){byId[p.id]=p});
+  var cur=null,busy=false;
+  function pad(n){return(n<10?'0':'')+n}
+
+  /* ---------- text decode ---------- */
+  var glyphs='01ΔΣΩ<>/#+=';
+  function decode(el){
+    var txt=el.dataset.text||(el.dataset.text=el.textContent);if(reduce){el.textContent=txt;return}
+    var f=0,T=16;clearInterval(el._t);
+    el._t=setInterval(function(){f++;var k=txt.length*f/T;
+      el.textContent=txt.replace(/\S/g,function(c,i){return i<k?c:glyphs[Math.random()*glyphs.length|0]});
+      if(f>=T){clearInterval(el._t);el.textContent=txt}},30);
+  }
+
+  /* ---------- page show ---------- */
+  function enter(p){
+    $$('.rv',p).forEach(function(el,i){el.style.setProperty('--i',i)});
+    p.classList.remove('enter');void p.offsetWidth;p.classList.add('enter');
+    $$('[data-decode]',p).forEach(decode);
+    if(p.id==='home')countUp();
+  }
+  function swap(id){
+    if(cur)byId[cur].hidden=true;
+    cur=id;var p=byId[id];p.hidden=false;window.scrollTo(0,0);
+    $$('.nav a,.tabs a').forEach(function(a){a.getAttribute('href')==='#'+id?a.setAttribute('aria-current','page'):a.removeAttribute('aria-current')});
+    $('#pc').innerHTML='<b>'+pad(ids.indexOf(id)+1)+'</b> / '+pad(ids.length);
+    try{history.replaceState(null,'','#'+id)}catch(e){}
+    if(id==='home')sizeField();
+    run();enter(p);
+  }
+
+  /* ---------- scan transition ---------- */
+  var xf=$('#xfer'),xl=$('#xl'),xn=$('#xn'),xt=$('#xt');
+  function wait(ms){return new Promise(function(r){setTimeout(r,ms)})}
+  function go(id){
+    if(!byId[id]||id===cur||busy)return;
+    if(reduce||!xf.animate){swap(id);return}
+    busy=true;var H=innerHeight,ease='cubic-bezier(.76,0,.24,1)';
+    xn.textContent=pad(ids.indexOf(id)+1)+' / '+pad(ids.length);xt.dataset.text=byId[id].dataset.name;xf.hidden=false;decode(xt);
+    function pass(clipFrom,clipTo,d){
+      xl.animate([{transform:'translateY(0)'},{transform:'translateY('+H+'px)'}],{duration:d,easing:ease,fill:'forwards'});
+      return xf.animate([{clipPath:clipFrom},{clipPath:clipTo}],{duration:d,easing:ease,fill:'forwards'}).finished;
+    }
+    pass('inset(0 0 100% 0)','inset(0 0 0% 0)',320)
+      .then(function(){swap(id);return wait(160)})
+      .then(function(){return pass('inset(0% 0 0 0)','inset(100% 0 0 0)',380)})
+      .then(function(){xf.hidden=true;busy=false})
+      .catch(function(){xf.hidden=true;busy=false;if(cur!==id)swap(id)});
+  }
+  document.addEventListener('click',function(e){
+    var a=e.target.closest('a[href^="#"]');if(!a)return;
+    var id=a.getAttribute('href').slice(1);if(byId[id]){e.preventDefault();go(id)}
+  });
+  document.addEventListener('keydown',function(e){
+    if(e.target.closest('input,textarea'))return;
+    var i=ids.indexOf(cur);
+    if(e.key==='ArrowRight'&&i<ids.length-1)go(ids[i+1]);
+    if(e.key==='ArrowLeft'&&i>0)go(ids[i-1]);
+  });
+  var sx,sy;
+  $('#main').addEventListener('touchstart',function(e){sx=e.touches[0].clientX;sy=e.touches[0].clientY},{passive:true});
+  $('#main').addEventListener('touchend',function(e){
+    if(sx==null)return;var dx=e.changedTouches[0].clientX-sx,dy=e.changedTouches[0].clientY-sy;sx=null;
+    if(Math.abs(dx)>70&&Math.abs(dx)>2*Math.abs(dy)){var i=ids.indexOf(cur);go(ids[dx<0?Math.min(ids.length-1,i+1):Math.max(0,i-1)])}
+  },{passive:true});
+
+  /* ---------- count up ---------- */
+  function countUp(){
+    if(reduce)return;
+    $$('[data-count]').forEach(function(el){var tg=+el.dataset.count,sf=el.dataset.suffix||'',s=performance.now();
+      (function tk(t){var p=Math.min(1,(t-s)/1000);el.textContent=Math.round((1-Math.pow(1-p,3))*tg)+sf;if(p<1)requestAnimationFrame(tk)})(s)});
+  }
+
+  /* ---------- copy ---------- */
+  var toast=$('#toast');
+  function show(m){toast.textContent=m;toast.classList.add('show');clearTimeout(show.t);show.t=setTimeout(function(){toast.classList.remove('show')},1700)}
+  $$('[data-copy]').forEach(function(b){b.addEventListener('click',function(){
+    function sel(){var r=document.createRange();r.selectNodeContents(b.parentElement.querySelector('b'));var s=getSelection();s.removeAllRanges();s.addRange(r);show('Selected')}
+    try{navigator.clipboard.writeText(b.dataset.copy).then(function(){show('Copied')},sel)}catch(e){sel()}
+  })});
+
+  /* ---------- glow sprites (drawn once, reused every frame) ---------- */
+  var cols=['#4DB8F0','#4FD1C5','#A9DDF5'];
+  var sprites=cols.map(function(c){var s=document.createElement('canvas');s.width=s.height=64;var g=s.getContext('2d'),r=g.createRadialGradient(32,32,0,32,32,32);
+    r.addColorStop(0,c);r.addColorStop(1,'rgba(0,0,0,0)');g.fillStyle=r;g.fillRect(0,0,64,64);return s});
+
+  /* ---------- hero nanowire field ---------- */
+  var fc=$('#field'),fx=fc.getContext('2d'),bgc=document.createElement('canvas'),W=0,H=0,rows=[],parts=[];
+  function mk(){return{x:Math.random()*W,y:Math.random()*H,vx:(Math.random()*.4+.12)*(Math.random()<.5?-1:1),vy:(Math.random()-.5)*.2,k:Math.random()*3|0,b:0,l:0,r:0}}
+  function sizeField(){
+    var d=Math.min(1.5,devicePixelRatio||1);W=fc.clientWidth;H=fc.clientHeight;if(!W||!H)return;
+    fc.width=W*d;fc.height=H*d;fx.setTransform(d,0,0,d,0,0);
+    bgc.width=fc.width;bgc.height=fc.height;var bx=bgc.getContext('2d');bx.setTransform(d,0,0,d,0,0);
+    var gap=W<600?36:48;rows=[];bx.lineWidth=1;
+    for(var y=gap,i=0;y<H;y+=gap,i++){rows.push(y);bx.strokeStyle='rgba(120,190,235,'+(i%3?.06:.14)+')';bx.beginPath();bx.moveTo(0,y+.5);bx.lineTo(W,y+.5);bx.stroke()}
+    parts=[];for(var j=0;j<(W<600?20:44);j++)parts.push(mk());
+  }
+  function drawField(){
+    if(!W)return;fx.clearRect(0,0,W,H);fx.drawImage(bgc,0,0,W,H);
+    for(var i=0;i<parts.length;i++){var p=parts[i];
+      if(p.b){p.l--;if(p.l<=0){parts[i]=mk();continue}var a=Math.min(1,p.l/40);
+        fx.globalAlpha=.55*a;fx.drawImage(sprites[p.k],p.x-28,p.r-28,56,56);
+        fx.fillStyle=cols[p.k];fx.globalAlpha=.6*a;fx.fillRect(p.x-44,p.r,88,1);
+        fx.globalAlpha=a;fx.fillRect(p.x-2,p.r-2,4,4);
+      }else{p.x+=p.vx;p.y+=p.vy;if(p.x<-10)p.x=W+10;if(p.x>W+10)p.x=-10;if(p.y<0||p.y>H)p.vy*=-1;
+        for(var j=0;j<rows.length;j++){if(Math.abs(p.y-rows[j])<.6&&Math.random()<.05){p.b=1;p.r=rows[j];p.l=150;break}}
+        fx.globalAlpha=.8;fx.fillStyle=cols[p.k];fx.fillRect(p.x-1,p.y-1,2,2)}
+    }
+    fx.globalAlpha=1;
+  }
+
+  /* ---------- platform scope ---------- */
+  var cc=$('#chip'),cx=cc.getContext('2d'),CW=640,CH=250,tt=0,hist=[[],[],[]],names=['GFAP','S100B','UCHL1'],tg=[.85,.55,.7];
+  function drawChip(){
+    cx.fillStyle='#020E16';cx.fillRect(0,0,CW,CH);
+    cx.strokeStyle='rgba(120,190,235,.07)';cx.lineWidth=1;cx.beginPath();
+    for(var gx=90;gx<CW;gx+=40){cx.moveTo(gx+.5,10);cx.lineTo(gx+.5,CH-10)}cx.stroke();
+    cx.font='500 12px "IBM Plex Mono", monospace';
+    for(var k=0;k<3;k++){
+      var y=48+k*76,base=y+20,v=tg[k]*(1-Math.exp(-tt/(55+k*25)))+Math.sin(tt*.18+k)*.012;
+      hist[k].push(v);if(hist[k].length>260)hist[k].shift();
+      cx.fillStyle='#5E7A8C';cx.textAlign='left';cx.fillText(names[k],16,y-12);
+      cx.strokeStyle='rgba(120,190,235,.16)';cx.beginPath();cx.moveTo(90,base+.5);cx.lineTo(CW-16,base+.5);cx.stroke();
+      cx.beginPath();for(var i=0;i<hist[k].length;i++){var x=90+i*((CW-106)/260),yy=base-hist[k][i]*42;i?cx.lineTo(x,yy):cx.moveTo(x,yy)}
+      cx.strokeStyle=cols[k];cx.globalAlpha=.25;cx.lineWidth=6;cx.stroke();cx.globalAlpha=1;cx.lineWidth=1.6;cx.stroke();
+      cx.fillStyle='#E8F3FA';cx.textAlign='right';cx.fillText((v*100).toFixed(1)+' ΔR',CW-16,y-12);
+    }
+    if(++tt>440){tt=0;hist=[[],[],[]]}
+  }
+
+  /* ---------- one animation loop, only for the visible page ---------- */
+  var raf=0,loops={home:drawField,platform:drawChip};
+  function run(){
+    cancelAnimationFrame(raf);var f=loops[cur];if(!f)return;
+    if(reduce){if(cur==='platform'){for(tt=0;tt<300;)drawChip()}else drawField();return}
+    (function tick(){if(document.hidden)return;f();raf=requestAnimationFrame(tick)})();
+  }
+  document.addEventListener('visibilitychange',run);
+  var rt;addEventListener('resize',function(){clearTimeout(rt);rt=setTimeout(function(){if(cur==='home')sizeField()},120)});
+
+  /* ---------- loader then first page ---------- */
+  var start=(location.hash||'').slice(1);if(!byId[start])start='home';
+  var loader=$('#loader'),seen=false;try{seen=sessionStorage.getItem('ndx')==='1';sessionStorage.setItem('ndx','1')}catch(e){}
+  var finished=false;
+  function done(){if(finished)return;finished=true;loader.classList.add('done');enter(byId[cur])}
+  byId['home'].hidden=true;swap(start);
+  if(seen||reduce){loader.classList.add('done');finished=true}
+  else{
+    var n=$('#ldn'),b=$('#ldb'),m=$('#ldm'),msgs=['Calibrating sensor','Channel GFAP','Channel S100B','Channel UCHL1','Ready'],t0=performance.now();
+    (function st(t){var p=Math.min(1,(t-t0)/1400),e=1-Math.pow(1-p,2.2),pc=Math.round(e*100);
+      n.textContent=pc;b.style.width=pc+'%';m.textContent=msgs[Math.min(4,Math.floor(e*5))];
+      if(p<1)requestAnimationFrame(st);else setTimeout(done,200)})(t0);
+    setTimeout(done,3000);
+  }
+})();
+</script>
+
+</body>
+</html>
